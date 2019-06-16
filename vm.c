@@ -7,111 +7,112 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-VM *vm_new() {
-    VM *vm = malloc(sizeof(VM));
-    vm->stack = int_stack_new();
-    return vm;
+const size_t DEFAULT_STACK_SPACE = 2097152;
+
+void vm_init(VM *vm) {
+    byte_vector_init(&vm->program);
+    int_stack_init_with_capacity(&vm->stack, DEFAULT_STACK_SPACE);
 }
 
-void vm_delete(VM *vm) {
-    free(vm->program);
-    int_stack_delete(vm->stack);
-    free(vm);
+void vm_free(VM *vm) {
+    byte_vector_free(&vm->program);
+    int_stack_free(&vm->stack);
 }
 
 void vm_run(VM *vm) {
     while (true) {
-        if (vm->pc >= vm->program_len) {
+        if (vm->pc >= byte_vector_size(&vm->program)) {
             break;
         }
         Opcode opcode = vm_decode_opcode(vm);
-        vm_dispatch_opcode(vm, opcode);
+        vm_execute_instruction(vm, opcode);
     }
 }
 
 Opcode vm_decode_opcode(VM *vm) {
-    Opcode opCode = opcode_from_u8(vm->program[vm->pc]);
+    u_int8_t byte = byte_vector_get(&vm->program, vm->pc);
+    Opcode opCode = opcode_from_u8(byte);
     ++vm->pc;
     return opCode;
 }
 
-void vm_dispatch_LOAD(VM *vm) {
+void vm_execute_LOAD(VM *vm) {
     u_int8_t reg = vm_next_8_bits(vm);
     u_int16_t number = vm_next_16_bits(vm);
     vm->registers[reg] = number;
 }
 
-#define VM_DISPATCH_BOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->registers[reg3] = vm->registers[reg1] op vm->registers[reg2];
+#define VM_EXECUTE_BOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->registers[reg3] = vm->registers[reg1] op vm->registers[reg2];
 
-void vm_dispatch_ADD(VM *vm) {
-    VM_DISPATCH_BOP(vm, +)
+void vm_execute_ADD(VM *vm) {
+    VM_EXECUTE_BOP(vm, +)
 }
 
-void vm_dispatch_SUB(VM *vm) {
-    VM_DISPATCH_BOP(vm, -)
+void vm_execute_SUB(VM *vm) {
+    VM_EXECUTE_BOP(vm, -)
 }
 
-void vm_dispatch_MUL(VM *vm) {
-    VM_DISPATCH_BOP(vm, *)
+void vm_execute_MUL(VM *vm) {
+    VM_EXECUTE_BOP(vm, *)
 }
 
-void vm_dispatch_DIV(VM *vm) {
-    VM_DISPATCH_BOP(vm, /)
+void vm_execute_DIV(VM *vm) {
+    VM_EXECUTE_BOP(vm, /)
     vm->remainder = reg1 % reg2;
 }
 
-#undef VM_DISPATCH_BOP
+#undef VM_EXECUTE_BOP
 
-void vm_dispatch_HLT(VM *vm) {
+void vm_execute_HLT(VM *vm) {
     // TODO: halt mechanism
 }
 
 
-#define VM_DISPATCH_JMP(vm, f) u_int8_t reg = vm_next_8_bits(vm); u_int64_t target = vm->registers[reg]; vm->pc f target;
+#define VM_EXECUTE_JMP(vm, f) u_int8_t reg = vm_next_8_bits(vm); u_int64_t target = vm->registers[reg]; vm->pc f target;
 
-void vm_dispatch_JMP(VM *vm) {
-    VM_DISPATCH_JMP(vm, =)
+void vm_execute_JMP(VM *vm) {
+    VM_EXECUTE_JMP(vm, =)
 }
 
-void vm_dispatch_JMPF(VM *vm) {
-    VM_DISPATCH_JMP(vm, +=)
+void vm_execute_JMPF(VM *vm) {
+    VM_EXECUTE_JMP(vm, +=)
 }
 
-void vm_dispatch_JMPB(VM *vm) {
-    VM_DISPATCH_JMP(vm, -=)
+void vm_execute_JMPB(VM *vm) {
+    VM_EXECUTE_JMP(vm, -=)
 }
 
-#undef VM_DISPATCH_JMP
+#undef VM_EXECUTE_JMP
 
-#define VM_DISPATCH_EQ(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); vm->equal_flag = vm->registers[reg1] op vm->registers[reg2]; vm_next_8_bits(vm);
+#define VM_EXECUTE_EQ(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); vm->equal_flag = vm->registers[reg1] op vm->registers[reg2]; vm_next_8_bits(vm);
 
-void vm_dispatch_EQ(VM *vm) {
-    VM_DISPATCH_EQ(vm, =)
+void vm_execute_EQ(VM *vm) {
+    VM_EXECUTE_EQ(vm, =)
 }
 
-void vm_dispatch_NEQ(VM *vm) {
-    VM_DISPATCH_EQ(vm, !=)
+void vm_execute_NEQ(VM *vm) {
+    VM_EXECUTE_EQ(vm, !=)
 }
 
-void vm_dispatch_GTE(VM *vm) {
-    VM_DISPATCH_EQ(vm, >=)
+void vm_execute_GTE(VM *vm) {
+    VM_EXECUTE_EQ(vm, >=)
 }
 
-void vm_dispatch_LTE(VM *vm) {
-    VM_DISPATCH_EQ(vm, <=)
+void vm_execute_LTE(VM *vm) {
+    VM_EXECUTE_EQ(vm, <=)
 }
 
-void vm_dispatch_LT(VM *vm) {
-    VM_DISPATCH_EQ(vm, <)
+void vm_execute_LT(VM *vm) {
+    VM_EXECUTE_EQ(vm, <)
 }
 
-void vm_dispatch_GT(VM *vm) {
-    VM_DISPATCH_EQ(vm, >)
+void vm_execute_GT(VM *vm) {
+    VM_EXECUTE_EQ(vm, >)
 }
 
-#undef VM_DISPATCH_EQ
+#undef VM_EXECUTE_EQ
 
-void vm_dispatch_JMPE(VM *vm) {
+void vm_execute_JMPE(VM *vm) {
     if (vm->equal_flag) {
         u_int8_t reg = vm_next_8_bits(vm);
         u_int32_t target = vm->registers[reg];
@@ -121,31 +122,31 @@ void vm_dispatch_JMPE(VM *vm) {
     }
 }
 
-void vm_dispatch_NOP(VM *vm) {
+void vm_execute_NOP(VM *vm) {
     vm_next_8_bits(vm);
     vm_next_8_bits(vm);
     vm_next_8_bits(vm);
 }
 
-void vm_dispatch_ALOC(VM *vm) {
+void vm_execute_ALOC(VM *vm) {
     // TODO: implement heap
 }
 
-void vm_dispatch_INC(VM *vm) {
+void vm_execute_INC(VM *vm) {
     u_int8_t reg = vm_next_8_bits(vm);
     ++vm->registers[reg];
     vm_next_8_bits(vm);
     vm_next_8_bits(vm);
 }
 
-void vm_dispatch_DEC(VM *vm) {
+void vm_execute_DEC(VM *vm) {
     u_int8_t reg = vm_next_8_bits(vm);
     --vm->registers[reg];
     vm_next_8_bits(vm);
     vm_next_8_bits(vm);
 }
 
-void vm_dispatch_DJMPE(VM *vm) {
+void vm_execute_DJMPE(VM *vm) {
     u_int16_t destination = vm_next_16_bits(vm);
     if (vm->equal_flag) {
         vm->pc = destination;
@@ -154,106 +155,106 @@ void vm_dispatch_DJMPE(VM *vm) {
     }
 }
 
-void vm_dispatch_PRTS(VM *vm) {
+void vm_execute_PRTS(VM *vm) {
     // TODO: implement printing
 }
 
-void vm_dispatch_LOADF64(VM *vm) {
+void vm_execute_LOADF64(VM *vm) {
     u_int8_t reg = vm_next_8_bits(vm);
     u_int16_t number = vm_next_16_bits(vm);
     vm->float_registers[reg] = number;
 }
 
-#define VM_DISPATCH_F64BOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->float_registers[reg3] = vm->float_registers[reg1] op vm->float_registers[reg2];
+#define VM_EXECUTE_F64BOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->float_registers[reg3] = vm->float_registers[reg1] op vm->float_registers[reg2];
 
-void vm_dispatch_ADDF64(VM *vm) {
-    VM_DISPATCH_F64BOP(vm, +)
+void vm_execute_ADDF64(VM *vm) {
+    VM_EXECUTE_F64BOP(vm, +)
 }
 
-void vm_dispatch_SUBF64(VM *vm) {
-    VM_DISPATCH_F64BOP(vm, -)
+void vm_execute_SUBF64(VM *vm) {
+    VM_EXECUTE_F64BOP(vm, -)
 }
 
-void vm_dispatch_MULF64(VM *vm) {
-    VM_DISPATCH_F64BOP(vm, *)
+void vm_execute_MULF64(VM *vm) {
+    VM_EXECUTE_F64BOP(vm, *)
 }
 
-void vm_dispatch_DIVF64(VM *vm) {
-    VM_DISPATCH_F64BOP(vm, /)
+void vm_execute_DIVF64(VM *vm) {
+    VM_EXECUTE_F64BOP(vm, /)
 }
 
-#undef VM_DISPATCH_F64BOP
+#undef VM_EXECUTE_F64BOP
 
-#define VM_DISPATCH_F64EQ(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); vm->equal_flag = vm->float_registers[reg1] op vm->float_registers[reg2]; vm_next_8_bits(vm);
+#define VM_EXECUTE_F64EQ(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); vm->equal_flag = vm->float_registers[reg1] op vm->float_registers[reg2]; vm_next_8_bits(vm);
 
-void vm_dispatch_EQF64(VM *vm) {
-    VM_DISPATCH_F64EQ(vm, =)
+void vm_execute_EQF64(VM *vm) {
+    VM_EXECUTE_F64EQ(vm, =)
 }
 
-void vm_dispatch_NEQF64(VM *vm) {
-    VM_DISPATCH_F64EQ(vm, !=)
+void vm_execute_NEQF64(VM *vm) {
+    VM_EXECUTE_F64EQ(vm, !=)
 }
 
-void vm_dispatch_GTF64(VM *vm) {
-    VM_DISPATCH_F64EQ(vm, >)
+void vm_execute_GTF64(VM *vm) {
+    VM_EXECUTE_F64EQ(vm, >)
 }
 
-void vm_dispatch_GTEF64(VM *vm) {
-    VM_DISPATCH_F64EQ(vm, >=)
+void vm_execute_GTEF64(VM *vm) {
+    VM_EXECUTE_F64EQ(vm, >=)
 }
 
-void vm_dispatch_LTF64(VM *vm) {
-    VM_DISPATCH_F64EQ(vm, <)
+void vm_execute_LTF64(VM *vm) {
+    VM_EXECUTE_F64EQ(vm, <)
 }
 
-void vm_dispatch_LTEF64(VM *vm) {
-    VM_DISPATCH_F64EQ(vm, <=)
+void vm_execute_LTEF64(VM *vm) {
+    VM_EXECUTE_F64EQ(vm, <=)
 }
 
-#undef VM_DISPATCH_F64BOP
+#undef VM_EXECUTE_F64BOP
 
-void vm_dispatch_SHL(VM *vm) {
+void vm_execute_SHL(VM *vm) {
     // TODO: implement shifting
 }
 
-void vm_dispatch_SHR(VM *vm) {
+void vm_execute_SHR(VM *vm) {
     // TODO: implement shifting
 }
 
-#define VM_DISPATCH_BWOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->registers[reg3] = (unsigned) vm->registers[reg1] op (unsigned) vm->registers[reg2];
+#define VM_EXECUTE_BWOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->registers[reg3] = (unsigned) vm->registers[reg1] op (unsigned) vm->registers[reg2];
 
-void vm_dispatch_AND(VM *vm) {
-   VM_DISPATCH_BWOP(vm, &)
+void vm_execute_AND(VM *vm) {
+   VM_EXECUTE_BWOP(vm, &)
 }
 
-void vm_dispatch_OR(VM *vm) {
-    VM_DISPATCH_BWOP(vm, |)
+void vm_execute_OR(VM *vm) {
+    VM_EXECUTE_BWOP(vm, |)
 }
 
-void vm_dispatch_XOR(VM *vm) {
-    VM_DISPATCH_BWOP(vm, ^)
+void vm_execute_XOR(VM *vm) {
+    VM_EXECUTE_BWOP(vm, ^)
 }
 
-#undef VM_DISPATCH_BWOP
+#undef VM_EXECUTE_BWOP
 
-void vm_dispatch_NOT(VM *vm) {
+void vm_execute_NOT(VM *vm) {
     u_int8_t reg1 = vm_next_8_bits(vm);
     u_int8_t reg2 = vm_next_8_bits(vm);
     vm->registers[reg2] = !vm->registers[reg1];
     vm_next_8_bits(vm);
 }
 
-void vm_dispatch_LUI(VM *vm) {
+void vm_execute_LUI(VM *vm) {
     // TODO: implement shifting
 }
 
-void vm_dispatch_CLOOP(VM *vm) {
+void vm_execute_CLOOP(VM *vm) {
     u_int16_t loop_count = vm_next_16_bits(vm);
     vm->loop_counter = loop_count;
     vm_next_8_bits(vm);
 }
 
-void vm_dispatch_LOOP(VM *vm) {
+void vm_execute_LOOP(VM *vm) {
     if (vm->loop_counter != 0) {
         --vm->loop_counter;
         u_int16_t target = vm_next_16_bits(vm);
@@ -263,121 +264,126 @@ void vm_dispatch_LOOP(VM *vm) {
     }
 }
 
-void vm_dispatch_LOADM(VM *vm) {
+void vm_execute_LOADM(VM *vm) {
     // TODO: implement heap
 }
 
-void vm_dispatch_SETM(VM *vm) {
+void vm_execute_SETM(VM *vm) {
     // TODO: implement heap
 }
 
-void vm_dispatch_PUSH(VM *vm) {
+void vm_execute_PUSH(VM *vm) {
     u_int8_t reg = vm_next_8_bits(vm);
     int32_t data = vm->registers[reg];
-    int_stack_push(vm->stack, data);
+    int_stack_push(&vm->stack, data);
     ++vm->sp;
     // TODO: shouldn't it use stack top?
 }
 
 
-void vm_dispatch_POP(VM *vm) {
+void vm_execute_POP(VM *vm) {
     u_int8_t  reg = vm_next_8_bits(vm);
-    int data = int_stack_pop(vm->stack);
+    int data = int_stack_pop(&vm->stack);
     vm->registers[reg] = data;
 }
 
-void vm_dispatch_CALL(VM *vm) {
+void vm_execute_CALL(VM *vm) {
     size_t return_destination = vm->pc + 3;
     size_t destination = vm_next_16_bits(vm);
-    int_stack_push(vm->stack, return_destination);
-    int_stack_push(vm->stack, vm->bp);
+    int_stack_push(&vm->stack, return_destination);
+    int_stack_push(&vm->stack, vm->bp);
     vm->bp = vm->sp;
     vm->pc = destination;
 }
 
-void vm_dispatch_RET(VM *vm) {
+void vm_execute_RET(VM *vm) {
     vm->sp = vm->bp;
-    vm->bp = int_stack_pop(vm->stack);
-    vm->pc = int_stack_pop(vm->stack);
+    vm->bp = int_stack_pop(&vm->stack);
+    vm->pc = int_stack_pop(&vm->stack);
 }
 
-void vm_dispatch_IGL(VM *vm) {
+void vm_execute_IGL(VM *vm) {
     // TODO: Illegal mechanism
-    vm->pc = vm->program_len;
+    vm->pc = byte_vector_size(&vm->program);
 }
 
 // TODO: make sure index matches position in Opcode enum by tests
 
 
-typedef void (*OpcodeDispatcher)(VM *);
+typedef void (*InstructionExecuter)(VM *);
 
-static OpcodeDispatcher opcode_dispatchers[OPCODE_COUNT + 1] = {
-        &vm_dispatch_LOAD,
-        &vm_dispatch_ADD,
-        &vm_dispatch_SUB,
-        &vm_dispatch_MUL,
-        &vm_dispatch_DIV,
-        &vm_dispatch_HLT,
-        &vm_dispatch_JMP,
-        &vm_dispatch_JMPF,
-        &vm_dispatch_JMPB,
-        &vm_dispatch_EQ,
-        &vm_dispatch_NEQ,
-        &vm_dispatch_GTE,
-        &vm_dispatch_LTE,
-        &vm_dispatch_LT,
-        &vm_dispatch_GT,
-        &vm_dispatch_JMPE,
-        &vm_dispatch_NOP,
-        &vm_dispatch_ALOC,
-        &vm_dispatch_INC,
-        &vm_dispatch_DEC,
-        &vm_dispatch_DJMPE,
-        &vm_dispatch_PRTS,
-        &vm_dispatch_LOADF64,
-        &vm_dispatch_ADDF64,
-        &vm_dispatch_SUBF64,
-        &vm_dispatch_MULF64,
-        &vm_dispatch_DIVF64,
-        &vm_dispatch_EQF64,
-        &vm_dispatch_NEQF64,
-        &vm_dispatch_GTF64,
-        &vm_dispatch_GTEF64,
-        &vm_dispatch_LTF64,
-        &vm_dispatch_LTEF64,
-        &vm_dispatch_SHL,
-        &vm_dispatch_SHR,
-        &vm_dispatch_AND,
-        &vm_dispatch_OR,
-        &vm_dispatch_XOR,
-        &vm_dispatch_NOT,
-        &vm_dispatch_LUI,
-        &vm_dispatch_CLOOP,
-        &vm_dispatch_LOOP,
-        &vm_dispatch_LOADM,
-        &vm_dispatch_SETM,
-        &vm_dispatch_PUSH,
-        &vm_dispatch_POP,
-        &vm_dispatch_CALL,
-        &vm_dispatch_RET,
-        &vm_dispatch_IGL
+static InstructionExecuter opcode_executors[OPCODE_COUNT + 1] = {
+        &vm_execute_LOAD,
+        &vm_execute_ADD,
+        &vm_execute_SUB,
+        &vm_execute_MUL,
+        &vm_execute_DIV,
+        &vm_execute_HLT,
+        &vm_execute_JMP,
+        &vm_execute_JMPF,
+        &vm_execute_JMPB,
+        &vm_execute_EQ,
+        &vm_execute_NEQ,
+        &vm_execute_GTE,
+        &vm_execute_LTE,
+        &vm_execute_LT,
+        &vm_execute_GT,
+        &vm_execute_JMPE,
+        &vm_execute_NOP,
+        &vm_execute_ALOC,
+        &vm_execute_INC,
+        &vm_execute_DEC,
+        &vm_execute_DJMPE,
+        &vm_execute_PRTS,
+        &vm_execute_LOADF64,
+        &vm_execute_ADDF64,
+        &vm_execute_SUBF64,
+        &vm_execute_MULF64,
+        &vm_execute_DIVF64,
+        &vm_execute_EQF64,
+        &vm_execute_NEQF64,
+        &vm_execute_GTF64,
+        &vm_execute_GTEF64,
+        &vm_execute_LTF64,
+        &vm_execute_LTEF64,
+        &vm_execute_SHL,
+        &vm_execute_SHR,
+        &vm_execute_AND,
+        &vm_execute_OR,
+        &vm_execute_XOR,
+        &vm_execute_NOT,
+        &vm_execute_LUI,
+        &vm_execute_CLOOP,
+        &vm_execute_LOOP,
+        &vm_execute_LOADM,
+        &vm_execute_SETM,
+        &vm_execute_PUSH,
+        &vm_execute_POP,
+        &vm_execute_CALL,
+        &vm_execute_RET,
+        &vm_execute_IGL
 };
 
-void vm_dispatch_opcode(VM *vm, Opcode opcode) {
-    opcode_dispatchers[opcode](vm);
+void vm_execute_instruction(VM *vm, Opcode opcode) {
+    opcode_executors[opcode](vm);
 }
 
 u_int8_t vm_next_8_bits(VM *vm) {
-    u_int8_t result = vm->program[vm->pc];
+    u_int8_t byte = byte_vector_get(&vm->program, vm->pc);
+    u_int8_t result = byte;
     ++vm->pc;
     return result;
 }
 
 u_int8_t vm_next_16_bits(VM *vm) {
-    u_int16_t head = vm->program[vm->pc] << 8u;
+    u_int8_t byte1 = byte_vector_get(&vm->program, vm->pc);
+    u_int16_t head = byte1 << 8u;
     ++vm->pc;
-    u_int16_t tail = vm->program[vm->pc];
+
+    u_int8_t byte2 = byte_vector_get(&vm->program, vm->pc);
+    u_int16_t tail = byte2;
     ++vm->pc;
+
     u_int16_t result = head | tail;
     return result;
 }

@@ -13,26 +13,25 @@
 typedef struct VM {
     int32_t registers[32];
     double float_registers[32];
-    u_int8_t *program;
-    size_t  program_len;
+    Byte_Vector program;
     size_t pc;
     size_t sp;
     size_t bp;
-    Int_Stack *stack;
+    Int_Stack stack;
     u_int32_t remainder;
     bool equal_flag;
     size_t loop_counter;
 } VM;
 
-VM* vm_new();
+void vm_init(VM *);
 
-void vm_delete(VM*);
+void vm_free(VM *);
 
 void vm_run(VM*);
 
 Opcode vm_decode_opcode(VM*);
 
-void vm_dispatch_opcode(VM*, Opcode);
+void vm_execute_instruction(VM *vm, Opcode opcode);
 
 u_int8_t vm_next_8_bits(VM*);
 
