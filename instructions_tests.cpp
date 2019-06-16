@@ -2,7 +2,7 @@
 // Created by allfathari on 6/16/19.
 //
 
-#include "catch.hpp"
+#include "lib/catch.hpp"
 #include <string.h>
 
 extern "C" {

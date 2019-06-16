@@ -145,7 +145,7 @@ Byte_Option byte_vector_get(Byte_Vector *vector, size_t index) {
 
 Byte_Slice_Option byte_vector_slice(Byte_Vector *vector, size_t start, size_t len) {
     Byte_Slice_Option result;
-    if (start + len >= vector->total) {
+    if (start + len > vector->total) {
         result.is_some = false;
     }
     else {

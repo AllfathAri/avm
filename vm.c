@@ -116,7 +116,7 @@ void vm_execute_JMPB(VM *vm) {
 #define VM_EXECUTE_EQ(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); vm->equal_flag = vm->registers[reg1] op vm->registers[reg2]; vm_next_8_bits(vm);
 
 void vm_execute_EQ(VM *vm) {
-    VM_EXECUTE_EQ(vm, =)
+    VM_EXECUTE_EQ(vm, ==)
 }
 
 void vm_execute_NEQ(VM *vm) {
@@ -160,7 +160,7 @@ void vm_execute_NOP(VM *vm) {
 void vm_execute_ALOC(VM *vm) {
     u_int8_t reg = vm_next_8_bits(vm);
     int bytesLength = vm->registers[reg];
-    size_t new_size = byte_vector_size(&vm->heap) + bytesLength;
+    size_t new_size = vm->heap.array_len + bytesLength;
     byte_vector_resize(&vm->heap, new_size);
 }
 
@@ -193,7 +193,7 @@ void vm_execute_PRTS(VM *vm) {
 
 void vm_execute_LOADF64(VM *vm) {
     u_int8_t reg = vm_next_8_bits(vm);
-    u_int16_t number = vm_next_16_bits(vm);
+    double number = vm_next_16_bits_as_double(vm);
     vm->float_registers[reg] = number;
 }
 
@@ -220,7 +220,7 @@ void vm_execute_DIVF64(VM *vm) {
 #define VM_EXECUTE_F64EQ(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); vm->equal_flag = vm->float_registers[reg1] op vm->float_registers[reg2]; vm_next_8_bits(vm);
 
 void vm_execute_EQF64(VM *vm) {
-    VM_EXECUTE_F64EQ(vm, =)
+    VM_EXECUTE_F64EQ(vm, ==)
 }
 
 void vm_execute_NEQF64(VM *vm) {
@@ -424,14 +424,30 @@ u_int8_t vm_next_8_bits(VM *vm) {
 }
 
 u_int16_t vm_next_16_bits(VM *vm) {
-    u_int8_t byte1 = byte_vector_get(&vm->program, vm->pc).value;
-    u_int16_t head = byte1 << 8u;
-    ++vm->pc;
+//    u_int8_t byte1 = byte_vector_get(&vm->program, vm->pc).value;
+//    u_int16_t head = byte1 << 8u;
+//    ++vm->pc;
+//
+//    u_int8_t byte2 = byte_vector_get(&vm->program, vm->pc).value;
+//    u_int16_t tail = byte2;
+//    ++vm->pc;
+//
+//    u_int16_t result = head | tail;
+//    return result;
 
-    u_int8_t byte2 = byte_vector_get(&vm->program, vm->pc).value;
-    u_int16_t tail = byte2;
-    ++vm->pc;
+    int dest;
+    Byte_Slice_Option bso = byte_vector_slice(&vm->program, vm->pc, 2);
+    u_int8_t *ptr = bso.value.ptr;
+    memcpy(&dest, ptr, 2);
+    vm->pc += 2;
+    return dest;
+}
 
-    u_int16_t result = head | tail;
-    return result;
+double vm_next_16_bits_as_double(VM *vm) {
+    double dest;
+    Byte_Slice_Option bso = byte_vector_slice(&vm->program, vm->pc, 2);
+    u_int8_t *ptr = bso.value.ptr;
+    memcpy(&dest, ptr, 2);
+    vm->pc += 2;
+    return dest;
 }

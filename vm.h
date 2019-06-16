@@ -42,4 +42,6 @@ static u_int8_t vm_next_8_bits(VM *vm);
 
 static u_int16_t vm_next_16_bits(VM *vm);
 
+static double vm_next_16_bits_as_double(VM *vm);
+
 #endif //AVM_VM_H
