@@ -1,17 +1,10 @@
 #include <stdio.h>
 #include "vm.h"
-
-const unsigned long hash(const char *str) {
-    unsigned long hash = 5381;
-    int c;
-
-    while ((c = *str++))
-        hash = ((hash << 5u) + hash) + c;
-    return hash;
-}
+#include <string.h>
 
 int main() {
-    const char *opCodes[] = {
+
+    const char *codeStrs[] = {
             "LOAD",
             "ADD",
             "SUB",
@@ -63,9 +56,8 @@ int main() {
             "IGL"
     };
 
-    for (int i = 0; i < OPCODE_COUNT; ++i) {
-        const char *opCode = opCodes[i];
-        printf("void vm_dispatch_%s(VM *vm){}\n", opCode);
+    for (int i = 0; i < OPCODE_COUNT + 1; ++i) {
+        printf("REQUIRE(opcode_from_u8(%d) == %s);\n", i, codeStrs[i]);
     }
 
     return 0;

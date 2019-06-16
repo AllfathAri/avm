@@ -1,22 +1,34 @@
 //
 // Created by allfathari on 6/12/19.
 //
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 
 #include "vm.h"
 #include "instructions.h"
-#include <stdlib.h>
-#include <stdbool.h>
+
 
 const size_t DEFAULT_STACK_SPACE = 2097152;
+const size_t DEFAULT_HEAP_STARTING_SIZE = 64;
 
 void vm_init(VM *vm) {
     byte_vector_init(&vm->program);
+    byte_vector_init_with_capacity(&vm->program, DEFAULT_HEAP_STARTING_SIZE);
     int_stack_init_with_capacity(&vm->stack, DEFAULT_STACK_SPACE);
 }
 
 void vm_free(VM *vm) {
     byte_vector_free(&vm->program);
+    byte_vector_free(&vm->heap);
     int_stack_free(&vm->stack);
+}
+
+Opcode vm_decode_opcode(VM *vm) {
+    u_int8_t byte = byte_vector_get(&vm->program, vm->pc).value;
+    Opcode opCode = opcode_from_u8(byte);
+    ++vm->pc;
+    return opCode;
 }
 
 void vm_run(VM *vm) {
@@ -24,16 +36,20 @@ void vm_run(VM *vm) {
         if (vm->pc >= byte_vector_size(&vm->program)) {
             break;
         }
-        Opcode opcode = vm_decode_opcode(vm);
-        vm_execute_instruction(vm, opcode);
+        vm_execute_instruction(vm);
     }
 }
 
-Opcode vm_decode_opcode(VM *vm) {
-    u_int8_t byte = byte_vector_get(&vm->program, vm->pc);
-    Opcode opCode = opcode_from_u8(byte);
-    ++vm->pc;
-    return opCode;
+void vm_run_once(VM *vm) {
+    vm_execute_instruction(vm);
+}
+
+void vm_add_byte(VM *vm, u_int8_t byte) {
+    byte_vector_add(&vm->program, byte);
+}
+
+void vm_add_bytes(VM *vm, Byte_Vector *bytes) {
+    byte_vector_append(&vm->program, bytes);
 }
 
 void vm_execute_LOAD(VM *vm) {
@@ -129,7 +145,10 @@ void vm_execute_NOP(VM *vm) {
 }
 
 void vm_execute_ALOC(VM *vm) {
-    // TODO: implement heap
+    u_int8_t reg = vm_next_8_bits(vm);
+    int bytesLength = vm->registers[reg];
+    size_t new_size = byte_vector_size(&vm->heap) + bytesLength;
+    byte_vector_resize(&vm->heap, new_size);
 }
 
 void vm_execute_INC(VM *vm) {
@@ -224,7 +243,7 @@ void vm_execute_SHR(VM *vm) {
 #define VM_EXECUTE_BWOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->registers[reg3] = (unsigned) vm->registers[reg1] op (unsigned) vm->registers[reg2];
 
 void vm_execute_AND(VM *vm) {
-   VM_EXECUTE_BWOP(vm, &)
+    VM_EXECUTE_BWOP(vm, &)
 }
 
 void vm_execute_OR(VM *vm) {
@@ -265,11 +284,27 @@ void vm_execute_LOOP(VM *vm) {
 }
 
 void vm_execute_LOADM(VM *vm) {
-    // TODO: implement heap
+    u_int8_t offset_reg = vm_next_8_bits(vm);
+    size_t offset = vm->registers[offset_reg];
+    u_int8_t* src = byte_vector_slice(&vm->heap, offset, sizeof(int)).value.ptr;
+
+    int dst;
+    memcpy(&dst, src, sizeof(int));
+
+    u_int8_t dst_reg = vm_next_8_bits(vm);
+    vm->registers[dst_reg] = dst;
 }
 
 void vm_execute_SETM(VM *vm) {
-    // TODO: implement heap
+    u_int8_t offset_reg = vm_next_8_bits(vm);
+    size_t offset = vm->registers[offset_reg];
+
+    u_int8_t data_reg = vm_next_8_bits(vm);
+    int data = vm->registers[data_reg];
+    u_int8_t buffer[4] = {0, 0, 0, 0};
+    memcpy(buffer, &data, sizeof(buffer));
+
+    // TODO: ...
 }
 
 void vm_execute_PUSH(VM *vm) {
@@ -280,10 +315,9 @@ void vm_execute_PUSH(VM *vm) {
     // TODO: shouldn't it use stack top?
 }
 
-
 void vm_execute_POP(VM *vm) {
-    u_int8_t  reg = vm_next_8_bits(vm);
-    int data = int_stack_pop(&vm->stack);
+    u_int8_t reg = vm_next_8_bits(vm);
+    int data = int_stack_pop(&vm->stack).value;
     vm->registers[reg] = data;
 }
 
@@ -298,8 +332,8 @@ void vm_execute_CALL(VM *vm) {
 
 void vm_execute_RET(VM *vm) {
     vm->sp = vm->bp;
-    vm->bp = int_stack_pop(&vm->stack);
-    vm->pc = int_stack_pop(&vm->stack);
+    vm->bp = int_stack_pop(&vm->stack).value;
+    vm->pc = int_stack_pop(&vm->stack).value;
 }
 
 void vm_execute_IGL(VM *vm) {
@@ -364,23 +398,24 @@ static InstructionExecuter opcode_executors[OPCODE_COUNT + 1] = {
         &vm_execute_IGL
 };
 
-void vm_execute_instruction(VM *vm, Opcode opcode) {
+void vm_execute_instruction(VM *vm) {
+    Opcode opcode = vm_decode_opcode(vm);
     opcode_executors[opcode](vm);
 }
 
 u_int8_t vm_next_8_bits(VM *vm) {
-    u_int8_t byte = byte_vector_get(&vm->program, vm->pc);
+    u_int8_t byte = byte_vector_get(&vm->program, vm->pc).value;
     u_int8_t result = byte;
     ++vm->pc;
     return result;
 }
 
 u_int8_t vm_next_16_bits(VM *vm) {
-    u_int8_t byte1 = byte_vector_get(&vm->program, vm->pc);
+    u_int8_t byte1 = byte_vector_get(&vm->program, vm->pc).value;
     u_int16_t head = byte1 << 8u;
     ++vm->pc;
 
-    u_int8_t byte2 = byte_vector_get(&vm->program, vm->pc);
+    u_int8_t byte2 = byte_vector_get(&vm->program, vm->pc).value;
     u_int16_t tail = byte2;
     ++vm->pc;
 

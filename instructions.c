@@ -5,10 +5,8 @@
 #include "instructions.h"
 
 Instruction instruction_make(Opcode opcode) {
-    Instruction result = {
-            opcode
-    };
-
+    Instruction result;
+    result.opcode = opcode;
     return result;
 }
 

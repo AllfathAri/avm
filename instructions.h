@@ -62,7 +62,8 @@ typedef enum Opcode {
 #define OPCODE_COUNT 48
 
 Opcode opcode_from_u8(u_int8_t);
-Opcode opcode_from_str(const char*);
+
+Opcode opcode_from_str(const char *);
 
 typedef struct Instruction {
     Opcode opcode;
