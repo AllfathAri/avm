@@ -40,6 +40,6 @@ static void vm_execute_instruction(VM *);
 
 static u_int8_t vm_next_8_bits(VM *vm);
 
-static u_int8_t vm_next_16_bits(VM *vm);
+static u_int16_t vm_next_16_bits(VM *vm);
 
 #endif //AVM_VM_H

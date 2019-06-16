@@ -13,9 +13,19 @@ const size_t DEFAULT_STACK_SPACE = 2097152;
 const size_t DEFAULT_HEAP_STARTING_SIZE = 64;
 
 void vm_init(VM *vm) {
+    for (int i = 0; i < 32; ++i) {
+        vm->registers[i] = 0;
+        vm->float_registers[i] = 0;
+    }
     byte_vector_init(&vm->program);
-    byte_vector_init_with_capacity(&vm->program, DEFAULT_HEAP_STARTING_SIZE);
+    byte_vector_init_with_capacity(&vm->heap, DEFAULT_HEAP_STARTING_SIZE);
     int_stack_init_with_capacity(&vm->stack, DEFAULT_STACK_SPACE);
+    vm->pc = 0;
+    vm->sp = 0;
+    vm->bp = 0;
+    vm->loop_counter = 0;
+    vm->remainder = 0;
+    vm->equal_flag = false;
 }
 
 void vm_free(VM *vm) {
@@ -73,8 +83,11 @@ void vm_execute_MUL(VM *vm) {
 }
 
 void vm_execute_DIV(VM *vm) {
-    VM_EXECUTE_BOP(vm, /)
-    vm->remainder = reg1 % reg2;
+    u_int8_t reg1 = vm_next_8_bits(vm);
+    u_int8_t reg2 = vm_next_8_bits(vm);
+    u_int8_t reg3 = vm_next_8_bits(vm);
+    vm->remainder = vm->registers[reg1] % vm->registers[reg2];
+    vm->registers[reg3] = vm->registers[reg1] / vm->registers[reg2];
 }
 
 #undef VM_EXECUTE_BOP
@@ -286,7 +299,7 @@ void vm_execute_LOOP(VM *vm) {
 void vm_execute_LOADM(VM *vm) {
     u_int8_t offset_reg = vm_next_8_bits(vm);
     size_t offset = vm->registers[offset_reg];
-    u_int8_t* src = byte_vector_slice(&vm->heap, offset, sizeof(int)).value.ptr;
+    u_int8_t *src = byte_vector_slice(&vm->heap, offset, sizeof(int)).value.ptr;
 
     int dst;
     memcpy(&dst, src, sizeof(int));
@@ -410,7 +423,7 @@ u_int8_t vm_next_8_bits(VM *vm) {
     return result;
 }
 
-u_int8_t vm_next_16_bits(VM *vm) {
+u_int16_t vm_next_16_bits(VM *vm) {
     u_int8_t byte1 = byte_vector_get(&vm->program, vm->pc).value;
     u_int16_t head = byte1 << 8u;
     ++vm->pc;

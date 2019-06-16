@@ -9,7 +9,7 @@ extern "C" {
     #include "instructions.h"
 }
 
-TEST_CASE("Create instruction must holds right opcode") {
+TEST_CASE("Create instruction") {
     for (int i = 0; i < OPCODE_COUNT; ++i) {
         auto oc = (Opcode) i;
         Instruction ins = instruction_make(oc);
@@ -69,7 +69,7 @@ TEST_CASE("String to instruction conversion") {
     REQUIRE(opcode_from_str("IGL") == IGL);
 }
 
-TEST_CASE("Illegal opcode is converted to IGL") {
+TEST_CASE("Illegal opcode conversion") {
     REQUIRE(opcode_from_str("123") == IGL);
     REQUIRE(opcode_from_str("ABC") == IGL);
     REQUIRE(opcode_from_str("!@#") == IGL);

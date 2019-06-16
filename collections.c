@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "collections.h"
+#include <stdarg.h>
 
 void int_stack_init(Int_Stack *stack) {
     return int_stack_init_with_capacity(stack, 16);
@@ -88,6 +89,16 @@ void byte_vector_init_with_capacity(Byte_Vector *vector, size_t capacity) {
     vector->total = 0;
     vector->array_len = capacity;
     vector->array = malloc(sizeof(u_int8_t) * capacity);
+}
+
+Byte_Vector byte_vector_from(u_int8_t *arr, size_t len) {
+    // TODO : optimize this
+    Byte_Vector vector;
+    byte_vector_init_with_capacity(&vector, len);
+    for (int i = 0; i < len; ++i) {
+        byte_vector_add(&vector, arr[i]);
+    }
+    return vector;
 }
 
 int byte_vector_size(Byte_Vector *vector) {

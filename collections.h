@@ -63,6 +63,8 @@ void byte_vector_init(Byte_Vector *);
 
 void byte_vector_init_with_capacity(Byte_Vector *, size_t);
 
+Byte_Vector byte_vector_from(u_int8_t*, size_t);
+
 int byte_vector_size(Byte_Vector *vector);
 
 void byte_vector_resize(Byte_Vector *, size_t);
