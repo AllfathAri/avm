@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "vm.h"
 #include "instructions.h"
@@ -18,8 +19,8 @@ void vm_init(VM *vm) {
         vm->float_registers[i] = 0;
     }
     byte_vector_init(&vm->program);
-    byte_vector_init_with_capacity(&vm->heap, DEFAULT_HEAP_STARTING_SIZE);
-    int_stack_init_with_capacity(&vm->stack, DEFAULT_STACK_SPACE);
+    byte_vector_with_defaults(&vm->heap, DEFAULT_HEAP_STARTING_SIZE, 0);
+    int_stack_with_capacity(&vm->stack, DEFAULT_STACK_SPACE);
     vm->pc = 0;
     vm->sp = 0;
     vm->bp = 0;
@@ -246,11 +247,21 @@ void vm_execute_LTEF64(VM *vm) {
 #undef VM_EXECUTE_F64BOP
 
 void vm_execute_SHL(VM *vm) {
-    // TODO: implement shifting
+    u_int8_t reg = vm_next_8_bits(vm);
+    u_int32_t data = (u_int32_t) vm->registers[reg];
+    u_int8_t bitCount = vm_next_8_bits(vm);
+    // TODO: should I change the bit count?
+    u_int32_t shiftedData = (data << bitCount) | (data >> (32u - bitCount));
+    vm->registers[reg] = shiftedData;
 }
 
 void vm_execute_SHR(VM *vm) {
-    // TODO: implement shifting
+    u_int8_t reg = vm_next_8_bits(vm);
+    u_int32_t data = (u_int32_t) vm->registers[reg];
+    u_int8_t bitCount = vm_next_8_bits(vm);
+    // TODO: should I change the bit count?
+    u_int32_t shiftedData = (data >> bitCount) | (data << (32u - bitCount));
+    vm->registers[reg] = shiftedData;
 }
 
 #define VM_EXECUTE_BWOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->registers[reg3] = (unsigned) vm->registers[reg1] op (unsigned) vm->registers[reg2];
@@ -272,7 +283,7 @@ void vm_execute_XOR(VM *vm) {
 void vm_execute_NOT(VM *vm) {
     u_int8_t reg1 = vm_next_8_bits(vm);
     u_int8_t reg2 = vm_next_8_bits(vm);
-    vm->registers[reg2] = !vm->registers[reg1];
+    vm->registers[reg2] = ~((unsigned) vm->registers[reg1]);
     vm_next_8_bits(vm);
 }
 
@@ -314,10 +325,8 @@ void vm_execute_SETM(VM *vm) {
 
     u_int8_t data_reg = vm_next_8_bits(vm);
     int data = vm->registers[data_reg];
-    u_int8_t buffer[4] = {0, 0, 0, 0};
-    memcpy(buffer, &data, sizeof(buffer));
-
-    // TODO: ...
+    u_int8_t *buffer = byte_vector_slice(&vm->heap, offset, sizeof(int)).value.ptr;
+    memcpy(buffer, &data, sizeof(int));
 }
 
 void vm_execute_PUSH(VM *vm) {
@@ -435,7 +444,7 @@ u_int16_t vm_next_16_bits(VM *vm) {
 //    u_int16_t result = head | tail;
 //    return result;
 
-    int dest;
+    u_int16_t dest = 0;
     Byte_Slice_Option bso = byte_vector_slice(&vm->program, vm->pc, 2);
     u_int8_t *ptr = bso.value.ptr;
     memcpy(&dest, ptr, 2);
@@ -444,7 +453,7 @@ u_int16_t vm_next_16_bits(VM *vm) {
 }
 
 double vm_next_16_bits_as_double(VM *vm) {
-    double dest;
+    double dest = 0.0;
     Byte_Slice_Option bso = byte_vector_slice(&vm->program, vm->pc, 2);
     u_int8_t *ptr = bso.value.ptr;
     memcpy(&dest, ptr, 2);

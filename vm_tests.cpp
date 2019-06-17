@@ -21,7 +21,7 @@ extern "C" {
 
 TEST_CASE("LOAD execution") {
     for (u_int8_t i = 0; i < 32; ++i) {
-        PREPARE_VM(BS({0, i, 1, 244}), 4)
+        PREPARE_VM(BS({0, i, 244, 1}), 4)
         vm_run_once(&vm);
         REQUIRE(vm.registers[i] == 500);
     }
@@ -280,7 +280,7 @@ TEST_CASE("JMPE execution") {
 
 TEST_CASE("NOP execution") {
     // TODO: test NOP better
-    PREPARE_VM(BS({16, 0, 0, 0,16, 0, 0, 0}), 8);
+    PREPARE_VM(BS({16, 0, 0, 0, 16, 0, 0, 0}), 8);
     vm_run_once(&vm);
     REQUIRE(vm.pc == 4);
 }
@@ -539,48 +539,184 @@ TEST_CASE("LTEF64 execution") {
 }
 
 TEST_CASE("SHL execution") {
-    // TODO: test shifts
+    for (u_int8_t i = 0; i < 32; ++i) {
+        PREPARE_VM(BS({33, 0, 0, 0}), 4);
+        vm.registers[i] = 5;
+        vm_run_once(&vm);
+        REQUIRE(vm.registers[i] == 327680);
+    }
 }
 
 TEST_CASE("SHR execution") {
-    // TODO: test shifts
+    for (u_int8_t i = 0; i < 32; ++i) {
+        PREPARE_VM(BS({34, 0, 0, 0}), 4);
+        vm.registers[i] = 5;
+        vm_run_once(&vm);
+        REQUIRE(vm.registers[i] == 0);
+    }
 }
 
 TEST_CASE("AND execution") {
+    for (u_int8_t i = 0; i < 32; ++i) {
+        for (u_int8_t j = 0; j < 32; ++j) {
+            for (u_int8_t k = 0; k < 32; ++k) {
+                PREPARE_VM(BS({35, i, j, k, 35, i, j, k}), 8);
+                vm.registers[i] = 5;
+                vm.registers[j] = 10;
+                vm_run_once(&vm);
+                if (i != j) {
+                    REQUIRE(vm.registers[k] == 0);
+                } else {
+                    REQUIRE(vm.registers[k] == 10);
+                }
 
+                vm.registers[i] = 5;
+                vm.registers[j] = 5;
+                vm_run_once(&vm);
+                REQUIRE(vm.registers[k] == 5);
+            }
+        }
+    }
 }
 
 TEST_CASE("OR execution") {
+    for (u_int8_t i = 0; i < 32; ++i) {
+        for (u_int8_t j = 0; j < 32; ++j) {
+            for (u_int8_t k = 0; k < 32; ++k) {
+                PREPARE_VM(BS({36, i, j, k, 36, i, j, k}), 8);
+                vm.registers[i] = 5;
+                vm.registers[j] = 10;
+                vm_run_once(&vm);
+                if (i != j) {
+                    REQUIRE(vm.registers[k] == 15);
+                } else {
+                    REQUIRE(vm.registers[k] == 10);
+                }
 
+                vm.registers[i] = 5;
+                vm.registers[j] = 5;
+                vm_run_once(&vm);
+                REQUIRE(vm.registers[k] == 5);
+            }
+        }
+    }
 }
 
 TEST_CASE("XOR execution") {
+    for (u_int8_t i = 0; i < 32; ++i) {
+        for (u_int8_t j = 0; j < 32; ++j) {
+            for (u_int8_t k = 0; k < 32; ++k) {
+                PREPARE_VM(BS({37, i, j, k, 37, i, j, k}), 8);
+                vm.registers[i] = 5;
+                vm.registers[j] = 10;
+                vm_run_once(&vm);
+                if (i != j) {
+                    REQUIRE(vm.registers[k] == 15);
+                } else {
+                    REQUIRE(vm.registers[k] == 0);
+                }
 
+                vm.registers[i] = 5;
+                vm.registers[j] = 5;
+                vm_run_once(&vm);
+                REQUIRE(vm.registers[k] == 0);
+            }
+        }
+    }
 }
 
 TEST_CASE("NOT execution") {
+    for (u_int8_t i = 0; i < 32; ++i) {
+        for (u_int8_t j = 0; j < 32; ++j) {
+            PREPARE_VM(BS({38, i, j, 0}), 4);
+            vm.registers[i] = 5;
+            vm_run_once(&vm);
+            REQUIRE(vm.registers[j] == -6);
+        }
+    }
+}
+
+TEST_CASE("LUI execution") {
+    // TODO: test LUI
+}
+
+TEST_CASE("CLOOP execution") {
+    PREPARE_VM(BS({40, 10, 0, 0}), 4);
+    vm_run_once(&vm);
+    REQUIRE(vm.loop_counter == 10);
+}
+
+TEST_CASE("LOOP execution") {
+    // TODO: test loop
+}
+
+TEST_CASE("LOADM execution") {
+    for (u_int8_t i = 0; i < 32; ++i) {
+        for (u_int8_t j = 0; j < 32; ++j) {
+            PREPARE_VM(BS({42, i, j, 0}), 4);
+            vm.registers[i] = 10;
+            byte_vector_set(&vm.heap, 10, 100);
+            vm_run_once(&vm);
+            REQUIRE(vm.registers[j] == 100);
+        }
+    }
 
 }
 
-TEST_CASE("LUI execution") {}
+TEST_CASE("SETM execution") {
+    for (u_int8_t i = 0; i < 32; ++i) {
+        for (u_int8_t j = 0; j < 32; ++j) {
+            PREPARE_VM(BS({42, i, j, 0}), 4);
+            if (i != j) {
+                vm.registers[i] = 10;
+                vm.registers[j] = 200;
+                byte_vector_set(&vm.heap, 10, 100);
+                vm_run_once(&vm);
+                REQUIRE(vm.registers[j] == 100);
+            } else {
+                vm.registers[i] = 10;
+                byte_vector_set(&vm.heap, 10, 100);
+                vm_run_once(&vm);
+                REQUIRE(vm.registers[i] == 100);
+            }
+        }
+    }
+}
 
-TEST_CASE("CLOOP execution") {}
+TEST_CASE("PUSH execution") {
+    for (u_int8_t i = 0; i < 32; ++i) {
+        PREPARE_VM(BS({44, i, 0, 0}), 4);
+        vm.registers[i] = 10;
+        vm_run_once(&vm);
+        REQUIRE(int_stack_peek(&vm.stack).value == 10);
+    }
+}
 
-TEST_CASE("LOOP execution") {}
+TEST_CASE("POP execution") {
+    for (u_int8_t i = 0; i < 32; ++i) {
+        PREPARE_VM(BS({45, i, 0, 0}), 4);
+        int_stack_push(&vm.stack, 10);
+        ++vm.sp;
+        vm_run_once(&vm);
+        REQUIRE(vm.registers[i] == 10);
+    }
+}
 
-TEST_CASE("LOADM execution") {}
+TEST_CASE("CALL & RET execution") {
+    PREPARE_VM(BS({46, 8, 0, 0, 5, 0, 0, 0, 0, 0, 244, 1, 47, 0, 0, 0}), 12);
+    vm_run_once(&vm);
+    vm_run_once(&vm);
+    vm_run_once(&vm);
+    REQUIRE(vm.registers[0] == 500);
+}
 
-TEST_CASE("SETM execution") {}
+TEST_CASE("RET execution") {
+    // TODO: test RET and CALL seperately
+}
 
-TEST_CASE("PUSH execution") {}
-
-TEST_CASE("POP execution") {}
-
-TEST_CASE("CALL execution") {}
-
-TEST_CASE("RET execution") {}
-
-TEST_CASE("IGL execution") {}
+TEST_CASE("IGL execution") {
+    // TODO: test IGL
+}
 
 #undef PREPARE_VM
 #undef BS

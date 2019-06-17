@@ -8,10 +8,10 @@
 #include <stdarg.h>
 
 void int_stack_init(Int_Stack *stack) {
-    return int_stack_init_with_capacity(stack, 16);
+    return int_stack_with_capacity(stack, 16);
 }
 
-void int_stack_init_with_capacity(Int_Stack *stack, int capacity) {
+void int_stack_with_capacity(Int_Stack *stack, int capacity) {
     if (capacity <= 0) {
         // TODO: implement error handling
     }
@@ -82,19 +82,32 @@ void int_stack_free(Int_Stack *stack) {
 }
 
 void byte_vector_init(Byte_Vector *vector) {
-    byte_vector_init_with_capacity(vector, 16);
+    byte_vector_with_capacity(vector, 16);
 }
 
-void byte_vector_init_with_capacity(Byte_Vector *vector, size_t capacity) {
+void byte_vector_with_capacity(Byte_Vector *vector, size_t capacity) {
     vector->total = 0;
     vector->array_len = capacity;
     vector->array = malloc(sizeof(u_int8_t) * capacity);
 }
 
+void byte_vector_with_defaults(Byte_Vector *vector, size_t capacity, u_int8_t byte) {
+    vector->total = capacity;
+    vector->array_len = capacity;
+    if (byte == 0) {
+        vector->array = calloc(capacity, sizeof(u_int8_t));
+    } else {
+        vector->array = malloc(sizeof(u_int8_t) * capacity);
+        for (int i = 0; i < capacity; ++i) {
+            vector->array[i] = byte;
+        }
+    }
+}
+
 Byte_Vector byte_vector_from(u_int8_t *arr, size_t len) {
     // TODO : optimize this
     Byte_Vector vector;
-    byte_vector_init_with_capacity(&vector, len);
+    byte_vector_with_capacity(&vector, len);
     for (int i = 0; i < len; ++i) {
         byte_vector_add(&vector, arr[i]);
     }

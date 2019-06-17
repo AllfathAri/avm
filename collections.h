@@ -22,7 +22,7 @@ typedef struct Int_Stack {
 
 void int_stack_init(Int_Stack *);
 
-void int_stack_init_with_capacity(Int_Stack *, int);
+void int_stack_with_capacity(Int_Stack *stack, int capacity);
 
 int int_stack_size(Int_Stack *);
 
@@ -61,7 +61,9 @@ typedef struct Byte_Vector {
 
 void byte_vector_init(Byte_Vector *);
 
-void byte_vector_init_with_capacity(Byte_Vector *, size_t);
+void byte_vector_with_capacity(Byte_Vector *, size_t);
+
+void byte_vector_with_defaults(Byte_Vector *, size_t, u_int8_t);
 
 Byte_Vector byte_vector_from(u_int8_t*, size_t);
 
