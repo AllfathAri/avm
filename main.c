@@ -4,6 +4,6 @@
 #include <string.h>
 
 int main() {
-    printf("%lu\n", sizeof(Assembler_Error));
+    printf("%lu", strlen("abc"));
     return 0;
 }

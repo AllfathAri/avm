@@ -5,10 +5,123 @@
 #ifndef AVM_ASSEMBLER_H
 #define AVM_ASSEMBLER_H
 
-//region Errors
-
 #include <zconf.h>
 #include "lib/mpc.h"
+#include "instructions.h"
+
+//region Tokens
+
+typedef enum Assembler_Token_Flag {
+    OP,
+    REGISTER,
+    INTEGER_OPERAND,
+    FLOAT_OPERAND,
+    LABEL_DECLARATION,
+    LABEL_USAGE,
+    DIRECTIVE,
+    IR_STRING,
+    COMMENT
+} Assembler_Token_Flag;
+
+typedef struct Op {
+    Opcode code;
+} Op;
+
+typedef struct Register {
+    size_t reg_num;
+} Register;
+
+typedef struct Integer_Operand {
+    u_int32_t value;
+} Integer_Operand;
+
+typedef struct Float_Operand {
+    double value;
+} Float_Operand;
+
+typedef struct Label_Declaration {
+    char *name;
+} Label_Declaration;
+
+typedef struct Label_Usage {
+    char *name;
+} Label_Usage;
+
+typedef struct Directive {
+    char *name;
+} Directive;
+
+typedef struct Ir_String {
+    char *name;
+} Ir_String;
+
+typedef struct Comment {
+
+} Comment;
+
+typedef struct Assembler_Token {
+    Assembler_Token_Flag flag;
+    union Token {
+        Op op;
+        Register reg;
+        Integer_Operand integer_operand;
+        Float_Operand float_operand;
+        Label_Declaration label_declaration;
+        Label_Usage label_usage;
+        Directive directive;
+        Ir_String ir_string;
+        Comment comment;
+    } token;
+} Assembler_Token;
+
+Assembler_Token *op_new(Opcode opcode);
+
+Assembler_Token *reg_new(size_t reg_num);
+
+Assembler_Token *i_op_new(int32_t value);
+
+Assembler_Token *f_op_new(double value);
+
+Assembler_Token *ldec_new(const char* name);
+
+Assembler_Token *lus_new(const char *name);
+
+Assembler_Token *directive_new(const char *name);
+
+Assembler_Token *ir_string_new(const char *name);
+
+Assembler_Token *comment_new();
+
+void assembler_token_delete(Assembler_Token *token);
+
+//endregion
+
+//region Parsers
+
+typedef struct Assembler_Parser {
+    mpc_parser_t *comment;
+    mpc_parser_t *reg;
+    mpc_parser_t *label_declaration;
+    mpc_parser_t *label_usage;
+    mpc_parser_t *opcode;
+    mpc_parser_t *integer_operand;
+    mpc_parser_t *float_operand;
+    mpc_parser_t *irstring;
+    mpc_parser_t *operand;
+    mpc_parser_t *directive_declaration;
+    mpc_parser_t *directive_combined;
+    mpc_parser_t *directive;
+    mpc_parser_t *instruction_combined;
+    mpc_parser_t *instruction;
+    mpc_parser_t *program;
+} Assembler_Parser;
+
+void assembler_parser_init(Assembler_Parser *);
+void assembler_parser_free(Assembler_Parser *);
+
+//endregion
+
+//region Errors
 
 typedef enum Assembler_Error_Flag {
     NO_SEGMENT_DECLARATION_FOUND,
@@ -65,27 +178,5 @@ void assembler_error_print(Assembler_Error *, char *);
 void assembler_error_description(Assembler_Error *, char *);
 
 //endregion
-
-typedef struct Assembler_Parser {
-    mpc_parser_t *comment;
-    mpc_parser_t *reg;
-    mpc_parser_t *label_declaration;
-    mpc_parser_t *label_usage;
-    mpc_parser_t *opcode;
-    mpc_parser_t *integer_operand;
-    mpc_parser_t *float_operand;
-    mpc_parser_t *irstring;
-    mpc_parser_t *operand;
-    mpc_parser_t *directive_declaration;
-    mpc_parser_t *directive_combined;
-    mpc_parser_t *directive;
-    mpc_parser_t *instruction_combined;
-    mpc_parser_t *instruction;
-    mpc_parser_t *program;
-} Assembler_Parser;
-
-void assembler_parser_init(Assembler_Parser *);
-void assembler_parser_free(Assembler_Parser *);
-
 #endif //AVM_ASSEMBLER_H
 

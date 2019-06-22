@@ -274,13 +274,33 @@ void vm_execute_LTEF64(VM *vm) {
 
 #undef VM_EXECUTE_F64BOP
 
+u_int32_t rotate_left(u_int32_t x, u_int32_t amount) {
+    const unsigned bits = sizeof(u_int32_t) * 8;
+
+    amount %= bits;
+
+    if (amount)
+        return (x << amount) | (x >> (bits - amount));
+    return x;
+}
+
+u_int32_t rotate_right(u_int32_t x, u_int32_t amount) {
+    const unsigned bits = sizeof(u_int32_t) * 8;
+
+    amount %= bits;
+
+    if (amount)
+        return (x >> amount) | (x << (bits - amount));
+    return x;
+}
+
 void vm_execute_SHL(VM *vm) {
     u_int8_t reg = vm_next_8_bits(vm);
     u_int32_t data = (u_int32_t) vm->registers[reg];
     u_int8_t bitCount = vm_next_8_bits(vm);
     if (bitCount == 0) bitCount = 16;
     // TODO: should I change the bit count?
-    u_int32_t shiftedData = (data << bitCount) | (data >> (32u - bitCount));
+    u_int32_t shiftedData = rotate_left(data, bitCount);
     vm->registers[reg] = shiftedData;
 }
 
@@ -290,7 +310,7 @@ void vm_execute_SHR(VM *vm) {
     u_int8_t bitCount = vm_next_8_bits(vm);
     if (bitCount == 0) bitCount = 16;
     // TODO: should I change the bit count?
-    u_int32_t shiftedData = (data >> bitCount) | (data << (32u - bitCount));
+    u_int32_t shiftedData = rotate_right(data, bitCount);
     vm->registers[reg] = shiftedData;
 }
 
