@@ -2,6 +2,7 @@
 // Created by allfathari on 6/21/19.
 //
 #include <stdio.h>
+#include "lib/mpc.h"
 #include "assembler.h"
 
 //region Error
@@ -78,17 +79,17 @@ void assembler_error_description(Assembler_Error *error, char *str) {
 void assembler_parser_init(Assembler_Parser *parser) {
     parser->comment = mpc_new("comment");
     parser->reg = mpc_new("register");
-    parser->label_declaration = mpc_new("label-declaration");
-    parser->label_usage = mpc_new("label-usage");
+    parser->label_declaration = mpc_new("label_declaration");
+    parser->label_usage = mpc_new("label_usage");
     parser->opcode = mpc_new("opcode");
-    parser->integer_operand = mpc_new("integer-operand");
-    parser->float_operand = mpc_new("float-operand");
+    parser->integer_operand = mpc_new("integer_operand");
+    parser->float_operand = mpc_new("float_operand");
     parser->irstring = mpc_new("irstring");
     parser->operand = mpc_new("operand");
-    parser->directive_declaration = mpc_new("directive-declaration");
-    parser->directive_combined = mpc_new("directive-combined");
+    parser->directive_declaration = mpc_new("directive_declaration");
+    parser->directive_combined = mpc_new("directive_combined");
     parser->directive = mpc_new("directive");
-    parser->instruction_combined = mpc_new("instruction-combined");
+    parser->instruction_combined = mpc_new("instruction_combined");
     parser->instruction = mpc_new("instruction");
     parser->program = mpc_new("program");
 
@@ -97,24 +98,23 @@ void assembler_parser_init(Assembler_Parser *parser) {
 
               " comment                 : /;[^\\r\\n]*/ ;                              "
               " register                : /\\$[0-9]+/ ;                                "
-              " label-declaration       : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+:/ ;          "
-              " label-usage             : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+@/ ;          "
+              " label_declaration       : /[a-zA-Z0-9]+:/ ;                            "
+              " label_usage             : /@[a-zA-Z0-9]+/ ;                            "
               " opcode                  : /[a-zA-Z0-9]+/ ;                             "
-              " integer-operand         : /#\\-?[0-9]+/                     ;          "
-              " float-operand           : /#\\-?[0-9].[0-9]+/ ;                        "
-              " irstring                : /\"(\\\\.|[^\"])*\"/ ;                       "
-              " operand                 : <integer-operand> | <float-operand>          "
-              "                         | <label-usage>     | <register>               "
+              " integer_operand         : /#\\-?[0-9]+/                     ;          "
+              " float_operand           : /#\\-?[0-9].[0-9]+/ ;                        "
+              " irstring                : /\'(\\\\.|[^\'])*\'/ ;                       "
+              " operand                 : <float_operand>   | <integer_operand>          "
+              "                         | <label_usage>     | <register>               "
               "                         | <irstring> ;                                 "
-              " directive-declaration   : /.[a-zA-Z0-9]+/ ;                            "
-              " directive-combined      : <label-declaration>? <directive-declaration> "
+              " directive_declaration   : /.[a-zA-Z0-9]+/ ;                            "
+              " directive_combined      : <label_declaration>? <directive_declaration> "
               "                           <operand>? <operand>? <operand>? ;           "
-              " directive               : <directive-combined> ;                       "
-              " instruction-combined    : <comment>? <label-declaration>? <opcode>     "
+              " directive               : <directive_combined> ;                       "
+              " instruction_combined    : <comment>? <label_declaration>? <opcode>     "
               "                           <operand>? <operand>? <operand>? <comment>? ;"
-              " instruction             : <instruction-combined> ;                     "
-              " program                 : ( <instruction> | <directive> )+ ;           ",
-
+              " instruction             : <instruction_combined> ;                     "
+              " program                 : ( <instruction> | <directive> )+ /$/ ;       ",
               parser->comment,
               parser->reg,
               parser->label_declaration,
@@ -123,7 +123,7 @@ void assembler_parser_init(Assembler_Parser *parser) {
               parser->integer_operand,
               parser->float_operand,
               parser->irstring,
-              parser->opcode,
+              parser->operand,
               parser->directive_declaration,
               parser->directive_combined,
               parser->directive,
@@ -131,25 +131,25 @@ void assembler_parser_init(Assembler_Parser *parser) {
               parser->instruction,
               parser->program,
               NULL);
-
-
 }
 
 void assembler_parser_free(Assembler_Parser *parser) {
-    mpc_delete(parser->comment);
-    mpc_delete(parser->reg);
-    mpc_delete(parser->label_declaration);
-    mpc_delete(parser->label_usage);
-    mpc_delete(parser->opcode);
-    mpc_delete(parser->integer_operand);
-    mpc_delete(parser->float_operand);
-    mpc_delete(parser->irstring);
-    mpc_delete(parser->opcode);
-    mpc_delete(parser->directive_declaration);
-    mpc_delete(parser->directive);
-    mpc_delete(parser->instruction_combined);
-    mpc_delete(parser->instruction);
-    mpc_delete(parser->program);
+    mpc_cleanup(14,
+            parser->comment,
+            parser->reg,
+            parser->label_declaration,
+            parser->label_usage,
+            parser->opcode,
+            parser->integer_operand,
+            parser->float_operand,
+            parser->irstring,
+            parser->operand,
+            parser->directive_declaration,
+            parser->directive_combined,
+            parser->directive,
+            parser->instruction_combined,
+            parser->instruction,
+            parser->program);
 }
 
 //endregion

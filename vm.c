@@ -69,7 +69,13 @@ void vm_execute_LOAD(VM *vm) {
     vm->registers[reg] = number;
 }
 
-#define VM_EXECUTE_BOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->registers[reg3] = vm->registers[reg1] op vm->registers[reg2];
+#define VM_EXECUTE_BOP(vm, op)                  \
+u_int8_t reg1 = vm_next_8_bits(vm);             \
+u_int8_t reg2 = vm_next_8_bits(vm);             \
+u_int8_t reg3 = vm_next_8_bits(vm);             \
+vm->registers[reg3] =                           \
+    vm->registers[reg1] op vm->registers[reg2]; \
+/* bumper line to support last backslash, leave empty! */
 
 void vm_execute_ADD(VM *vm) {
     VM_EXECUTE_BOP(vm, +)
@@ -98,7 +104,11 @@ void vm_execute_HLT(VM *vm) {
 }
 
 
-#define VM_EXECUTE_JMP(vm, f) u_int8_t reg = vm_next_8_bits(vm); u_int64_t target = vm->registers[reg]; vm->pc f target;
+#define VM_EXECUTE_JMP(vm, f)          \
+u_int8_t reg = vm_next_8_bits(vm);     \
+u_int64_t target = vm->registers[reg]; \
+vm->pc f target;                       \
+/* bumper line to support last backslash, leave empty! */
 
 void vm_execute_JMP(VM *vm) {
     VM_EXECUTE_JMP(vm, =)
@@ -114,7 +124,13 @@ void vm_execute_JMPB(VM *vm) {
 
 #undef VM_EXECUTE_JMP
 
-#define VM_EXECUTE_EQ(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); vm->equal_flag = vm->registers[reg1] op vm->registers[reg2]; vm_next_8_bits(vm);
+#define VM_EXECUTE_EQ(vm, op)                   \
+u_int8_t reg1 = vm_next_8_bits(vm);             \
+u_int8_t reg2 = vm_next_8_bits(vm);             \
+vm->equal_flag =                                \
+    vm->registers[reg1] op vm->registers[reg2]; \
+vm_next_8_bits(vm);                             \
+/* bumper line to support last backslash, leave empty! */
 
 void vm_execute_EQ(VM *vm) {
     VM_EXECUTE_EQ(vm, ==)
@@ -198,7 +214,13 @@ void vm_execute_LOADF64(VM *vm) {
     vm->float_registers[reg] = number;
 }
 
-#define VM_EXECUTE_F64BOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->float_registers[reg3] = vm->float_registers[reg1] op vm->float_registers[reg2];
+#define VM_EXECUTE_F64BOP(vm, op)                           \
+u_int8_t reg1 = vm_next_8_bits(vm);                         \
+u_int8_t reg2 = vm_next_8_bits(vm);                         \
+u_int8_t reg3 = vm_next_8_bits(vm);                         \
+vm->float_registers[reg3] =                                 \
+    vm->float_registers[reg1] op vm->float_registers[reg2]; \
+/* bumper line to support last backslash, leave empty! */
 
 void vm_execute_ADDF64(VM *vm) {
     VM_EXECUTE_F64BOP(vm, +)
@@ -218,7 +240,13 @@ void vm_execute_DIVF64(VM *vm) {
 
 #undef VM_EXECUTE_F64BOP
 
-#define VM_EXECUTE_F64EQ(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); vm->equal_flag = vm->float_registers[reg1] op vm->float_registers[reg2]; vm_next_8_bits(vm);
+#define VM_EXECUTE_F64EQ(vm, op)                            \
+u_int8_t reg1 = vm_next_8_bits(vm);                         \
+u_int8_t reg2 = vm_next_8_bits(vm);                         \
+vm->equal_flag =                                            \
+    vm->float_registers[reg1] op vm->float_registers[reg2]; \
+vm_next_8_bits(vm);                                         \
+/* bumper line to support last backslash, leave empty! */
 
 void vm_execute_EQF64(VM *vm) {
     VM_EXECUTE_F64EQ(vm, ==)
@@ -250,6 +278,7 @@ void vm_execute_SHL(VM *vm) {
     u_int8_t reg = vm_next_8_bits(vm);
     u_int32_t data = (u_int32_t) vm->registers[reg];
     u_int8_t bitCount = vm_next_8_bits(vm);
+    if (bitCount == 0) bitCount = 16;
     // TODO: should I change the bit count?
     u_int32_t shiftedData = (data << bitCount) | (data >> (32u - bitCount));
     vm->registers[reg] = shiftedData;
@@ -259,12 +288,19 @@ void vm_execute_SHR(VM *vm) {
     u_int8_t reg = vm_next_8_bits(vm);
     u_int32_t data = (u_int32_t) vm->registers[reg];
     u_int8_t bitCount = vm_next_8_bits(vm);
+    if (bitCount == 0) bitCount = 16;
     // TODO: should I change the bit count?
     u_int32_t shiftedData = (data >> bitCount) | (data << (32u - bitCount));
     vm->registers[reg] = shiftedData;
 }
 
-#define VM_EXECUTE_BWOP(vm, op) u_int8_t reg1 = vm_next_8_bits(vm); u_int8_t reg2 = vm_next_8_bits(vm); u_int8_t reg3 = vm_next_8_bits(vm); vm->registers[reg3] = (unsigned) vm->registers[reg1] op (unsigned) vm->registers[reg2];
+#define VM_EXECUTE_BWOP(vm, op)                                       \
+u_int8_t reg1 = vm_next_8_bits(vm);                                   \
+u_int8_t reg2 = vm_next_8_bits(vm);                                   \
+u_int8_t reg3 = vm_next_8_bits(vm);                                   \
+vm->registers[reg3] =                                                 \
+    (unsigned) vm->registers[reg1] op (unsigned) vm->registers[reg2]; \
+/* bumper line to support last backslash, leave empty! */
 
 void vm_execute_AND(VM *vm) {
     VM_EXECUTE_BWOP(vm, &)

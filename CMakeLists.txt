@@ -16,4 +16,5 @@ add_executable(avm_test
         instructions.c instructions.h instructions_tests.cpp
         assembler.c assembler.h assembler_tests.cpp
         collections.c collections.h
+        lib/mpc.c lib/mpc.h
         lib/catch.hpp)
